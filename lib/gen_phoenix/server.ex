@@ -1,18 +1,24 @@
 defmodule GenPhoenix.Server do
-  def __using__(opts) do
-    mod = Keyword.get(opts, :module)
-
+  defmacro __using__(_opts) do
     quote do
-      use unquote(mod), :controller
-
+      import Plug.Conn, only: [send_resp: 3]
       @behaviour GenPhoenix.Server.Behaviour
 
       def call(conn, params) do
         case execute(params) do
-          {:reply, resp} -> nil
-          :noreply -> nil
+          {:reply, resp} ->
+            respond(conn, resp)
+
+          :noreply ->
+            send_resp(conn, 200, "")
         end
       end
+
+      def respond(conn, resp) do
+        send_resp(conn, 200, Poison.encode!(resp))
+      end
+
+      defoverridable respond: 2
     end
   end
 
@@ -22,5 +28,6 @@ defmodule GenPhoenix.Server do
     """
 
     @callback execute(map()) :: {:reply, any()} | :noreply
+    @callback respond(Plug.Conn.t(), map()) :: Plug.Conn.t()
   end
 end
